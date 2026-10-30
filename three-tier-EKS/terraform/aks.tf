@@ -32,6 +32,8 @@ resource "azurerm_kubernetes_cluster" "aks" {
     network_plugin    = "azure"
     load_balancer_sku = "standard"
     outbound_type     = "loadBalancer"
+    service_cidr      = var.service_cidr
+    dns_service_ip    = var.dns_service_ip
   }
 
   # Production Storage Profile (Enables Azure Disk & Azure File CSI drivers for MongoDB)

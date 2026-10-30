@@ -47,6 +47,18 @@ variable "ingress_subnet_address_prefixes" {
   default     = ["10.0.4.0/24"]
 }
 
+variable "service_cidr" {
+  description = "CIDR range used by Kubernetes services (must NOT overlap with any subnet in the VNet)"
+  type        = string
+  default     = "172.16.0.0/16"
+}
+
+variable "dns_service_ip" {
+  description = "IP address within service_cidr reserved for Kubernetes DNS service (CoreDNS)"
+  type        = string
+  default     = "172.16.0.10"
+}
+
 variable "cluster_name" {
   description = "The name of the AKS cluster"
   type        = string
@@ -68,7 +80,7 @@ variable "kubernetes_version" {
 variable "system_node_count" {
   description = "Initial number of nodes in the system node pool"
   type        = number
-  default     = 2
+  default     = 1
 }
 
 variable "system_node_min_count" {
@@ -78,15 +90,15 @@ variable "system_node_min_count" {
 }
 
 variable "system_node_max_count" {
-  description = "Maximum nodes in the system node pool"
+  description = "Maximum nodes in the system node pool (stays within 4 vCPU Free Tier limit)"
   type        = number
-  default     = 3
+  default     = 2
 }
 
 variable "vm_size" {
-  description = "VM size for AKS worker nodes"
+  description = "VM size for AKS worker nodes (Standard_EC2as_v5 has 2 vCPUs, 16GB RAM and available quota in northeurope)"
   type        = string
-  default     = "Standard_DC2as_v6"
+  default     = "Standard_EC2as_v5"
 }
 
 variable "acr_name" {
