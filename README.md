@@ -208,3 +208,32 @@ A complete end-to-end DevOps demonstration of deploying an enterprise-grade thre
 - **Resource Limits**: Pods configured with memory and CPU `requests` and `limits` to prevent node exhaustion.
 - **Remote State**: Terraform state management backed by Azure Blob Storage with locking support.
 
+
+
+---
+
+## 📸 Visual Verification & Proofs
+
+### 1. Application Web Interface (React)
+Accessing the public Azure Ingress endpoint (`http://172.129.145.97`):
+![Application Web UI](docs/screenshots/01-app-web-ui.png)
+
+### 2. End-to-End API & MongoDB Persistence
+Testing REST endpoints and MongoDB write/read through Ingress:
+![API Flow](docs/screenshots/02-api-flow.png)
+
+### 3. Kubernetes Pod Self-Healing in Real Time
+Simulating a pod crash and observing automated zero-downtime recovery:
+![Pod Self-Healing](docs/screenshots/03-pod-self-healing.png)
+
+### 4. Ingress-NGINX Public Load Balancer
+Public IP allocation from Azure Load Balancer:
+![Ingress LoadBalancer](docs/screenshots/04-ingress-loadbalancer.png)
+
+### 5. All Kubernetes Workloads & HPA
+Health status across all pods, services, deployments, statefulsets, and autoscalers:
+![Kubernetes Workloads](docs/screenshots/05-k8s-workloads.png)
+
+### 6. Prometheus & Grafana Metrics Dashboard
+Live CPU and Memory utilization across the `three-tier` application namespace:
+![Grafana Dashboard](docs/screenshots/grafana-three-tier-dashboard.png)
