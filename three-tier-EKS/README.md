@@ -1,59 +1,48 @@
-# Three-Tier Web Application on Azure Kubernetes Service (AKS)
+# Production Three-Tier Web Application on Azure Kubernetes Service (AKS)
 
-A complete end-to-end DevOps demonstration of deploying an enterprise-grade three-tier web application using Infrastructure as Code (Terraform), containerization (Docker), container orchestration (Kubernetes / Azure AKS), GitOps/Helm workflows, and full-stack observability (Prometheus & Grafana).
+[![Terraform](https://img.shields.io/badge/IaC-Terraform-623CE4?logo=terraform&logoColor=white)](https://www.terraform.io/)
+[![Azure AKS](https://img.shields.io/badge/Kubernetes-Azure%20AKS-0078D4?logo=microsoftazure&logoColor=white)](https://azure.microsoft.com/en-us/products/kubernetes-service)
+[![Docker](https://img.shields.io/badge/Containers-Docker-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
+[![React](https://img.shields.io/badge/Frontend-React.js-61DAFB?logo=react&logoColor=black)](https://react.dev/)
+[![Node.js](https://img.shields.io/badge/Backend-Node.js%20Express-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![MongoDB](https://img.shields.io/badge/Database-MongoDB-47A248?logo=mongodb&logoColor=white)](https://www.mongodb.com/)
+[![Prometheus](https://img.shields.io/badge/Monitoring-Prometheus-E6522C?logo=prometheus&logoColor=white)](https://prometheus.io/)
+[![Grafana](https://img.shields.io/badge/Dashboards-Grafana-F46800?logo=grafana&logoColor=white)](https://grafana.com/)
 
----
-
-## 🏛 Architecture Overview
-
-```
-                      +-----------------------------+
-                      |          End User           |
-                      +--------------+--------------+
-                                     |
-                                     | (HTTPS / HTTP)
-                                     v
-                      +-----------------------------+
-                      |   Ingress Controller        |
-                      |        (NGINX)              |
-                      +-------+-------------+-------+
-                              |             |
-           Path: / (Frontend) |             | Path: /api (Backend)
-                              v             v
-             +--------------------+     +--------------------+
-             |   React Frontend   |     |   Node.js Backend  |
-             |       (Pods)       |     |       (Pods)       |
-             +--------------------+     +---------+----------+
-                                                  |
-                                                  | Mongoose / DB Wire
-                                                  v
-                                        +--------------------+
-                                        |  MongoDB Database  |
-                                        | (StatefulSet / PV) |
-                                        +--------------------+
-```
-
-### Request Lifecycle
-1. **Public Ingestion**: Users access the public IP/FQDN handled by Azure Load Balancer and routed via **Ingress-NGINX**.
-2. **Path Routing**: Ingress intelligently routes traffic:
-   - `/` $\rightarrow$ React Single Page Application (SPA).
-   - `/api` $\rightarrow$ Node.js REST API service.
-3. **Data Persistence**: The backend connects to the internal MongoDB instance configured with Kubernetes Persistent Volumes (PV/PVC).
-4. **Self-Healing & Scalability**: Kubernetes ReplicaSets ensure auto-recovery of failed pods and support Horizontal Pod Autoscaling (HPA).
+An end-to-end, enterprise-ready DevOps project demonstrating Infrastructure as Code (IaC), containerization, microservices orchestration, ingress traffic management, pod self-healing, horizontal pod autoscaling (HPA), and full-stack telemetry on Microsoft Azure.
 
 ---
 
-## 🧰 Tools & Technologies
+## 🏛 Architecture Diagram
 
-| Tool | Purpose |
-| :--- | :--- |
-| **Azure AKS** | Managed Kubernetes cluster managing container lifecycle, scaling, and recovery |
-| **Terraform** | Declarative Infrastructure as Code (IaC) provisioning all Azure resources |
-| **Docker** | Multi-stage container builds packaging React frontend and Node.js backend |
-| **Azure ACR** | Private container registry securing and storing Docker images |
-| **kubectl** | CLI for managing and inspecting Kubernetes manifests and workloads |
-| **Helm** | Kubernetes package manager for installing Ingress-NGINX and Prometheus stack |
-| **Prometheus + Grafana** | Metrics collection, threshold alerting, and interactive telemetry dashboards |
+![Three-Tier Architecture Diagram](docs/architecture-diagram.png)
+
+### Request Lifecycle & Data Flow
+1. **Client Ingestion**: External users access the application via Azure Load Balancer on Public IP `172.129.145.97` (Port 80/443).
+2. **Ingress Routing (NGINX)**:
+   - Requests to `/` are forwarded to the **React Presentation Tier** (`frontend-service:80`).
+   - Requests to `/api/*` are path-rewritten and forwarded to the **Node.js Application Tier** (`backend-service:5000`).
+3. **Data Persistence Tier**: Node.js connects to **MongoDB StatefulSet** over an internal headless cluster service (`mongodb-service:27017`) backed by an Azure Managed Disk PersistentVolume (`ReadWriteOnce`).
+4. **Self-Healing & Scaling**: Kubernetes ReplicaSets auto-heal killed pods in **< 3 seconds**. Horizontal Pod Autoscalers (HPA) monitor CPU thresholds (70%) to scale replicas from 2 to 5 automatically.
+5. **Observability**: Prometheus continuously scrapes node, container, and cluster metrics, feeding real-time Grafana dashboards.
+
+---
+
+## 🧰 Tools & Technology Stack
+
+| Layer | Tool / Technology | Purpose |
+| :--- | :--- | :--- |
+| **Cloud Provider** | Microsoft Azure (`northeurope`) | Enterprise cloud foundation hosting compute, storage, and networking |
+| **Infrastructure as Code** | Terraform ($\ge$ 1.5.0) | Declaratively provisions Resource Groups, VNets, Subnets, NSGs, AKS, and ACR |
+| **Container Orchestration**| Azure AKS (v1.36) | Managed Kubernetes cluster with Azure CNI networking and autoscaling node pools |
+| **Container Registry** | Azure ACR (`threetieracr123`) | Secure private registry with managed identity integration (`AcrPull`) |
+| **Containerization** | Docker | Multi-stage image builds for React and Node.js microservices |
+| **Ingress Controller** | Ingress-NGINX (Helm) | L7 reverse proxy handling SSL termination and URL path-based routing |
+| **Frontend Tier** | React.js (Nginx) | Responsive Single Page Application (SPA) with live task management UI |
+| **Backend Tier** | Node.js (Express & Mongoose) | RESTful API exposing `/api/items` and `/api/health` endpoints |
+| **Database Tier** | MongoDB 6.0 | Stateful database with PersistentVolumeClaims for persistent storage |
+| **Autoscaling** | Kubernetes HPA v2 | Auto-scales workloads between 2 and 5 pods based on 70% CPU target |
+| **Monitoring & Metrics** | Prometheus & Grafana | Real-time cluster telemetry, pod resource tracking, and alerts |
 
 ---
 
@@ -61,35 +50,46 @@ A complete end-to-end DevOps demonstration of deploying an enterprise-grade thre
 
 ```
 .
-├── src/
-│   ├── frontend/             # React SPA (source, public assets, Dockerfile)
-│   └── backend/              # Node.js Express API (server.js, Dockerfile)
+├── docs/
+│   ├── architecture-diagram.png  # Enterprise architecture visual diagram
+│   └── screenshots/              # Real-world verification evidence & proofs
+│       ├── 01-app-web-ui.png     # Live React Web Application UI
+│       ├── 02-api-flow.png       # End-to-end API & MongoDB persistence test
+│       ├── 03-pod-self-healing.png # Real-time pod crash auto-recovery proof
+│       ├── 04-ingress-loadbalancer.png # Azure LoadBalancer IP verification
+│       ├── 05-k8s-workloads.png  # Healthy pods, deployments, statefulsets & HPA
+│       └── grafana-three-tier-dashboard.png # Live Grafana telemetry metrics
 │
-├── terraform/                # Infrastructure as Code (Azure)
-│   ├── main.tf               # Terraform settings, providers, and remote backend
-│   ├── network.tf            # Resource Group, VNet, Subnet
-│   ├── aks.tf                # AKS cluster and ACR role assignment
-│   ├── acr.tf                # Azure Container Registry
-│   ├── variables.tf          # Input variables & defaults
-│   ├── outputs.tf            # Cluster credentials & registry endpoints
-│   └── terraform.tfvars      # Environment-specific configuration
+├── k8s/                          # Kubernetes Manifests
+│   ├── namespace.yaml            # Isolated 'three-tier' production namespace
+│   ├── secrets.yaml              # MongoDB credentials & connection strings
+│   ├── mongodb.yaml              # MongoDB StatefulSet & PersistentVolumeClaim
+│   ├── backend.yaml              # Node.js backend Deployment, Service & ConfigMap
+│   ├── frontend.yaml             # React frontend Deployment & Service
+│   ├── ingress.yaml              # Ingress-NGINX path routing rules
+│   ├── ingress-values.yaml       # Ingress-NGINX Helm values with Azure health probe
+│   └── hpa.yaml                  # Horizontal Pod Autoscaling (70% CPU target)
 │
-├── k8s/                      # Kubernetes Manifests
-│   ├── namespaces/           # Isolated environments (dev/prod)
-│   ├── secrets/              # Credentials and configuration maps
-│   ├── mongodb/              # MongoDB StatefulSet/Deployment & PersistentVolume
-│   ├── backend/              # Node.js backend Deployment & Service
-│   ├── frontend/             # React frontend Deployment & Service
-│   └── ingress/              # Ingress rules routing traffic
+├── monitoring/                   # Observability Stack
+│   └── prometheus-values.yaml    # Custom Helm configuration for kube-prometheus-stack
 │
-└── monitoring/               # Observability Configuration
-    ├── prometheus-values.yaml# Custom values for Prometheus/Grafana Helm chart
-    └── grafana-dashboards/   # Preconfigured application dashboards
+├── src/                          # Application Source Code
+│   ├── backend/                  # Node.js Express API (server.js, Dockerfile)
+│   └── frontend/                 # React SPA (App.js, index.js, Dockerfile)
+│
+└── terraform/                    # Infrastructure as Code (Azure)
+    ├── main.tf                   # Provider definitions & remote state template
+    ├── network.tf                # Resource Group, VNet (/16), AKS & Ingress Subnets, NSG
+    ├── aks.tf                    # AKS cluster, node pool, CSI drivers, AcrPull role
+    ├── acr.tf                    # Azure Container Registry
+    ├── variables.tf              # Configurable parameters & non-overlapping CIDRs
+    ├── outputs.tf                # Cluster endpoints & credentials
+    └── terraform.tfvars          # Production variable assignments
 ```
 
 ---
 
-## 🚀 Step-by-Step Deployment Guide
+## 🚀 Deployment Guide
 
 ### Prerequisites
 - [Azure CLI (`az`)](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli) logged in (`az login`)
@@ -100,115 +100,91 @@ A complete end-to-end DevOps demonstration of deploying an enterprise-grade thre
 
 ---
 
-### Step 1: Provision Infrastructure with Terraform
+### Phase 1: Provision Infrastructure with Terraform
 
-1. Navigate to the terraform directory:
-   ```bash
-   cd terraform
-   ```
-2. Initialize and validate the Terraform configuration:
-   ```bash
-   terraform init
-   terraform validate
-   ```
-3. Plan and apply the deployment:
-   ```bash
-   terraform plan -out=tfplan
-   terraform apply tfplan
-   ```
-4. Authenticate `kubectl` to your new AKS cluster:
-   ```bash
-   az aks get-credentials --resource-group three-tier-rg --name three-tier-aks --overwrite-existing
-   ```
+```powershell
+cd terraform
+terraform init
+terraform plan -out=tfplan
+terraform apply "tfplan"
+```
+
+Configure `kubectl` to target your new AKS cluster:
+```powershell
+az aks get-credentials --resource-group three-tier-rg --name three-tier-aks --overwrite-existing
+```
 
 ---
 
-### Step 2: Build & Push Container Images to ACR
+### Phase 2: Build & Push Images to Azure Container Registry
 
-1. Log in to your Azure Container Registry:
-   ```bash
-   az acr login --name <your-acr-name>
-   ```
+```powershell
+# Authenticate Docker to ACR
+az acr login --name threetieracr123
 
-2. Build and push the **Backend** image:
-   ```bash
-   docker build -t <your-acr-name>.azurecr.io/backend:v1 ./src/backend
-   docker push <your-acr-name>.azurecr.io/backend:v1
-   ```
+# Build and Push Backend
+docker build --provenance=false -t threetieracr123.azurecr.io/backend:v1 ../src/backend
+docker push threetieracr123.azurecr.io/backend:v1
 
-3. Build and push the **Frontend** image:
-   ```bash
-   docker build -t <your-acr-name>.azurecr.io/frontend:v1 ./src/frontend
-   docker push <your-acr-name>.azurecr.io/frontend:v1
-   ```
+# Build and Push Frontend
+docker build --provenance=false -t threetieracr123.azurecr.io/frontend:v1 ../src/frontend
+docker push threetieracr123.azurecr.io/frontend:v1
+```
 
 ---
 
-### Step 3: Deploy Application onto Kubernetes
+### Phase 3: Deploy Kubernetes Workloads
 
-1. Apply namespace and secrets:
-   ```bash
-   kubectl apply -f k8s/namespaces/
-   kubectl apply -f k8s/secrets/
-   ```
+```powershell
+cd ../k8s
 
-2. Deploy the database layer (MongoDB):
-   ```bash
-   kubectl apply -f k8s/mongodb/
-   ```
+# 1. Create Namespace & Secrets
+kubectl apply -f namespace.yaml
+kubectl apply -f secrets.yaml
 
-3. Deploy backend and frontend workloads:
-   ```bash
-   kubectl apply -f k8s/backend/
-   kubectl apply -f k8s/frontend/
-   ```
+# 2. Deploy Database Tier (MongoDB StatefulSet)
+kubectl apply -f mongodb.yaml
 
-4. Install Ingress-NGINX controller via Helm:
-   ```bash
-   helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
-   helm repo update
-   helm install ingress-nginx ingress-nginx/ingress-nginx
-   ```
+# 3. Deploy Application Tiers (Backend & Frontend)
+kubectl apply -f backend.yaml
+kubectl apply -f frontend.yaml
 
-5. Apply Ingress routing:
-   ```bash
-   kubectl apply -f k8s/ingress/
-   ```
+# 4. Install Ingress-NGINX via Helm
+helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+helm repo update
+helm install ingress-nginx ingress-nginx/ingress-nginx `
+  -f ingress-values.yaml `
+  --namespace ingress-nginx `
+  --create-namespace
+
+# 5. Apply Ingress Routing & Autoscaling
+kubectl apply -f ingress.yaml
+kubectl apply -f hpa.yaml
+```
 
 ---
 
-### Step 4: Deploy Monitoring Stack (Prometheus + Grafana)
+### Phase 4: Deploy Observability Stack (Prometheus + Grafana)
 
-1. Add Prometheus community Helm repository:
-   ```bash
-   helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-   helm repo update
-   ```
+```powershell
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update
 
-2. Install kube-prometheus-stack using custom values:
-   ```bash
-   helm install monitoring prometheus-community/kube-prometheus-stack \
-     -f monitoring/prometheus-values.yaml \
-     --namespace monitoring \
-     --create-namespace
-   ```
+helm install monitoring prometheus-community/kube-prometheus-stack `
+  --namespace monitoring `
+  --create-namespace
+```
 
-3. Access the Grafana dashboard:
-   ```bash
-   kubectl port-forward svc/monitoring-grafana 3000:80 -n monitoring
-   ```
-   Open `http://localhost:3000` in your browser (Default user: `admin`, password retrieved via secret).
-
----
-
-## 🔒 Security & Best Practices
-- **Role-Based Access Control (RBAC)**: Managed AKS cluster integrated with Azure Entra ID / Managed Identity.
-- **ACR Integration**: Dedicated `AcrPull` role assignment configured via Terraform without embedding static credentials.
-- **Non-Root Containers**: Frontend and backend containers run under unprivileged user contexts.
-- **Resource Limits**: Pods configured with memory and CPU `requests` and `limits` to prevent node exhaustion.
-- **Remote State**: Terraform state management backed by Azure Blob Storage with locking support.
-
-
+Access Grafana dashboard:
+```powershell
+kubectl port-forward svc/monitoring-grafana 3000:80 -n monitoring
+```
+- Open: `http://localhost:3000`
+- User: `admin`
+- Password:
+  ```powershell
+  [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String((kubectl get secret -n monitoring monitoring-grafana -o jsonpath="{.data.admin-password}")))
+  ```
 
 ---
 
@@ -223,7 +199,7 @@ Testing REST endpoints and MongoDB write/read through Ingress:
 ![API Flow](docs/screenshots/02-api-flow.png)
 
 ### 3. Kubernetes Pod Self-Healing in Real Time
-Simulating a pod crash and observing automated zero-downtime recovery:
+Simulating a pod crash and observing automated zero-downtime recovery (< 3 seconds):
 ![Pod Self-Healing](docs/screenshots/03-pod-self-healing.png)
 
 ### 4. Ingress-NGINX Public Load Balancer
@@ -237,3 +213,19 @@ Health status across all pods, services, deployments, statefulsets, and autoscal
 ### 6. Prometheus & Grafana Metrics Dashboard
 Live CPU and Memory utilization across the `three-tier` application namespace:
 ![Grafana Dashboard](docs/screenshots/grafana-three-tier-dashboard.png)
+
+---
+
+## 🧹 Infrastructure Teardown & Cleanup
+
+To destroy all cloud resources and avoid incurring any Azure charges:
+
+```powershell
+cd terraform
+terraform destroy -auto-approve
+```
+
+Or delete the resource group directly via Azure CLI:
+```powershell
+az group delete --name three-tier-rg --yes --no-wait
+```
